@@ -1,0 +1,15 @@
+html {
+    padding: 0;
+    margin: 0;
+}
+
+svg {
+  border-radius: 3px;
+  border: 1px solid rgba(0,0,0,.1);
+}
+
+text {
+  dominant-baseline: middle;
+  font-family: "Open Sans", sans-serif;
+  fill: #333;
+}
