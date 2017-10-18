@@ -9,7 +9,17 @@ svg {
 }
 
 text {
-  dominant-baseline: middle;
+  dominant-baseline: central;
   font-family: "Open Sans", sans-serif;
   fill: #333;
+}
+
+.attr-links line {
+    stroke: #999;
+    stroke-opacity: 0;
+}
+
+.nodes circle {
+    stroke: #fff;
+    stroke-width: 1.5px;
 }
