@@ -114,10 +114,10 @@ function getLayout(n){
     // x 12 y 9
     let pos = [];
     if (n === 8){
-        pos.push(transPos(6, 5));
+        pos.push(transPos(6, 6));
         pos.push(transPos(4, 5));
         pos.push(transPos(8, 5));
-        pos.push(transPos(6, 1.5));
+        pos.push(transPos(6, 2));
         pos.push(transPos(2.5, 3));
         pos.push(transPos(9.5, 3));
         pos.push(transPos(3, 7.5));
@@ -129,11 +129,11 @@ function getLayout(n){
 function getSubLayout(pCoord, n){
     let px = pCoord.x;
     let py = pCoord.y;
-    let disToCenter = (R+r)*0.8;
+    let disToCenter = (R+r)*1.4;
     let coords = [];
     //TODO: left or right, up or down
     for (let i = 0; i < n; ++i){
-        let rad = i*1.0/n*2*PI;
+        let rad = i*1.0/n*2*PI + 15.0/180*PI;
         let dx = Math.cos(rad)*disToCenter;
         let dy = Math.sin(rad)*disToCenter;
         coords.push({x: px+dx, y: py+dy});
@@ -160,7 +160,7 @@ function loadDataPoints(schema){
                                 id: e,
                                 x: attrPos[j].x,
                                 y: attrPos[j].y,
-                                color: COLOR(i+10)});
+                                color: COLOR(i+8)});
         });
         dataPoints.attrs.push(attrTmp);
     });
@@ -168,20 +168,22 @@ function loadDataPoints(schema){
 
 }
 
-function drawEntities(entity){
+function drawEntities(data){
+    let entity = data.entity;
+    let attrs = data.attrs;
     let svgGroup =  svg.select('.schema')
     	.selectAll("g")
     	.data(entity)
     	.enter()
     	.append("g")
-        .attr("class", "entity-group")
+        .attr("class", "entity-tuple")
         .attr("id", (d)=>{
-            return "entity-group-id"+d.id;
+            return "entity-tuple-id-"+d.id;
         });
     svgGroup.append("circle")
         .attr("class", "entity-shape")
         .attr("id", (d)=>{
-            return "entity-shape-id"+d.id;
+            return "entity-shape-id-"+d.id;
         })
     	.attr("cx", (d)=>{
     		// console.log(d, i, pos[i].x);
@@ -197,7 +199,7 @@ function drawEntities(entity){
     svgGroup.append("text")
         .attr("class", "entity-name")
         .attr("id", (d)=>{
-            return d.id;
+            return "entity-name-id-"+d.id;
         })
         .attr("x", (d)=>{
             return d.x;
@@ -208,16 +210,91 @@ function drawEntities(entity){
         .text((d)=>{
             return d.name;
         });
+
+    attrs.forEach((d, i)=>{
+        let pName = d.parent;
+        let dt = d.data;
+        let pg = d3.select("#entity-tuple-id-"+pName)
+            .append("g")
+            .attr("class", "entity-attr-group")
+            .attr("id", "entity-attr-group-id-"+pName)
+            .selectAll("g")
+            .data(dt)
+            .enter()
+            .append("g")
+            .attr("class", "entity-attr-tuple")
+            .attr("id", (e, j)=>{
+                return "entity-attr-tuple-id-"+e.id;
+            });
+        pg.append("circle")
+            .attr("class", "entity-attr-shape")
+            .attr("id", (e)=>{
+                return "entity-attr-shape-id-"+e.id;
+            })
+            .attr("cx", (e)=>{
+                // console.log(d, i, pos[i].x);
+                return e.x;
+            })
+            .attr("cy", (e) =>{
+                return e.y;
+            })
+            .attr("r", r)
+            .attr("fill", (e) => {
+                return e.color;
+            });
+        pg.append("text")
+            .attr("class", "entity-attr-name")
+            .attr("id", (e)=>{
+                return "entity-attr-name-id-"+e.id;
+            })
+            .attr("x", (e)=>{
+                return e.x;
+            })
+            .attr("y", (e)=>{
+                return e.y;
+            })
+            .text((e)=>{
+                return e.name;
+            });
+    });
+
+    // svgGroup.append("g")
+    //     .attr("class", "entity-attr")
+    //     .attr("id", (d)=>{
+    //         return "entity-attr-group-id-"+d.id;
+    //     })
+    //     .selectAll("g")
+    //     .data()
+    //     .enter()
+    //     .append("g")
+    //     .attr("class", "entity-attr-tuple")
+    //     .attr("id", (e)=>{
+    //         return "entity-attr-tuple-id-"+e.id;
+    //     });
+
+
     return svgGroup;
 }
 
-function drawAttrs(attrs){
-
+function toggleAttrs(e){
+    // let targetEntity = e;
+    // console.log(e.target.id);
+    let strs = e.target.id.split("-");
+    let id = strs[strs.length-1];
+    console.log(id);
+    $("#entity-attr-group-id-" + id).toggle(2000);
 }
 
 let points = loadDataPoints(dataSchema);
-let svgEntity = drawEntities(points.entity);
-let svgAttrs = drawAttrs(points.attrs);
+let svgEntity = drawEntities(points);
+
+
+
+$(".entity-tuple").click((e) => {
+    // console.log(e);
+    toggleAttrs(e);
+});
+// let svgAttrs = drawAttrs(points.attrs);
 
 
 // let fakedata = ['1','2','3','4','5','6','7','8'];

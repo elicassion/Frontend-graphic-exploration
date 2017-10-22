@@ -35,7 +35,16 @@ text {
     color: #f4e925;
 }
 
+circle{
+    cursor: hand;
+}
+
 text.entity-name{
     font-size: 1.5em;
+    text-anchor: middle;
+    cursor: default;
+}
+text.entity-attr-name{
+    font-size: 0.75em;
     text-anchor: middle;
 }
