@@ -34,3 +34,8 @@ text {
     color: #B2BBC1;
     color: #f4e925;
 }
+
+text.entity-name{
+    font-size: 1.5em;
+    text-anchor: middle;
+}

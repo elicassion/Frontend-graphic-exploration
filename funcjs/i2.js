@@ -1,3 +1,5 @@
+let PI = Math.PI;
+
 let svg = d3.select("svg");
 // let WIDTH = document.,
 // let HEIGHT = +svg.height;
@@ -14,7 +16,10 @@ let WIDTH = parseInt(s_style.width);
 let HEIGHT = parseInt(s_style.height);
 console.log(WIDTH,HEIGHT);
 let COLOR = d3.scaleOrdinal(d3.schemeCategory20);
-
+let R = 50;
+let r = 20;
+svg.append('g')
+    .attr('class', 'schema');
 let dataSchema ={
     entity: [
         {
@@ -40,6 +45,46 @@ let dataSchema ={
             attrs:[
                 'institute_name'
             ]
+        },
+        {
+            className: 'conference',
+            attrs:[
+                'conference_location',
+                'conference_series',
+                'official_conference_url',
+                'under_cs',
+                'start_date',
+                'end_data',
+                'conference_location',
+                'abstract_registration_date',
+                'submission_deadline',
+                'notification_due_date',
+                'final_version_due_date'
+            ]
+        },
+        {
+            className: 'Affiliation',
+            attrs:[
+                'league_name'
+            ]
+        },
+        {
+            className: 'Field',
+            attrs:[
+
+            ]
+        },
+        {
+            className: 'Venue',
+            attrs:[
+                'name'
+            ]
+        },
+        {
+            className: 'Journal',
+            attrs:[
+
+            ]
         }
     ],
     relation: [
@@ -55,6 +100,8 @@ let dataSchema ={
         }
     ]
 };
+
+//TODO: Build a Class
 
 function transPos(x, y){
     return {
@@ -79,25 +126,121 @@ function getLayout(n){
     return pos;
 }
 
+function getSubLayout(pCoord, n){
+    let px = pCoord.x;
+    let py = pCoord.y;
+    let disToCenter = (R+r)*0.8;
+    let coords = [];
+    //TODO: left or right, up or down
+    for (let i = 0; i < n; ++i){
+        let rad = i*1.0/n*2*PI;
+        let dx = Math.cos(rad)*disToCenter;
+        let dy = Math.sin(rad)*disToCenter;
+        coords.push({x: px+dx, y: py+dy});
+    }
+    return coords;
+}
 
-let fakedata = ['1','2','3','4','5','6','7','8'];
-let pos = getLayout(8);
-let s_entities = svg.append('g')
-	.attr("class", "entity")
-	.selectAll("circle")
-	.data(fakedata)
-	.enter()
-	.append("circle")
-	.attr("cx", (d, i)=>{
-		console.log(d, i, pos[i].x);
-		return pos[i].x;
-	})
-	.attr("cy", (d, i) =>{
-		return pos[i].y;
-	})
-	.attr("r", 40)
-	.attr("fill", (d) => {
-        return COLOR(d);
+function loadDataPoints(schema){
+    let dataPoints = {entity:[], attrs:[]};
+    console.log(schema.entity.length);
+    let entityPos = getLayout(schema.entity.length);
+    console.log(entityPos);
+    schema.entity.forEach((d, i) => {
+        //TODO: color schema
+        let attrPos = getSubLayout(entityPos[i],d.attrs.length);
+        dataPoints.entity.push({name: d.className,
+                                id: d.className,
+                                x: entityPos[i].x,
+                                y: entityPos[i].y,
+                                color: COLOR(i)});
+        let attrTmp = {parent: d.className, data:[]};
+        d.attrs.forEach((e, j) => {
+            attrTmp.data.push({name: e,
+                                id: e,
+                                x: attrPos[j].x,
+                                y: attrPos[j].y,
+                                color: COLOR(i+10)});
+        });
+        dataPoints.attrs.push(attrTmp);
     });
+    return dataPoints;
 
-console.log(s_entities);
+}
+
+function drawEntities(entity){
+    let svgShape =  svg.select('.schema')
+        .append('g')
+    	.attr("class", "entity-shape-group")
+    	.selectAll("circle")
+    	.data(entity)
+    	.enter()
+    	.append("circle")
+        .attr("class", "entity-shape")
+        .attr("id", (d)=>{
+            return d.id;
+        })
+    	.attr("cx", (d)=>{
+    		// console.log(d, i, pos[i].x);
+    		return d.x;
+    	})
+    	.attr("cy", (d) =>{
+    		return d.y;
+    	})
+    	.attr("r", R)
+    	.attr("fill", (d) => {
+            return d.color;
+        });
+    let svgText = svg.select('.schema')
+        .append('g')
+        .attr("class", "entity-name-group")
+        .selectAll("text")
+        .data(entity)
+        .enter()
+        .append("text")
+        .attr("class", "entity-name")
+        .attr("id", (d)=>{
+            return d.id;
+        })
+        .attr("x", (d)=>{
+            return d.x;
+        })
+        .attr("y", (d)=>{
+            return d.y;
+        })
+        .text((d)=>{
+            return d.name;
+        });
+    return {shape: svgShape, text: svgText}
+}
+
+function drawAttrs(attrs){
+
+}
+
+let points = loadDataPoints(dataSchema);
+let svgEntity = drawEntities(points.entity);
+let svgAttrs = drawAttrs(points.attrs);
+
+
+// let fakedata = ['1','2','3','4','5','6','7','8'];
+// let pos = getLayout(8);
+// let s_entities = svg.append('g')
+// 	.attr("class", "entity")
+// 	.selectAll("circle")
+// 	.data(fakedata)
+// 	.enter()
+// 	.append("circle")
+// 	.attr("cx", (d, i)=>{
+// 		console.log(d, i, pos[i].x);
+// 		return pos[i].x;
+// 	})
+// 	.attr("cy", (d, i) =>{
+// 		return pos[i].y;
+// 	})
+// 	.attr("r", R)
+// 	.attr("fill", (d) => {
+//         return COLOR(d);
+//     });
+//
+// console.log(s_entities);
