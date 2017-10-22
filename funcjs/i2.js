@@ -169,16 +169,19 @@ function loadDataPoints(schema){
 }
 
 function drawEntities(entity){
-    let svgShape =  svg.select('.schema')
-        .append('g')
-    	.attr("class", "entity-shape-group")
-    	.selectAll("circle")
+    let svgGroup =  svg.select('.schema')
+    	.selectAll("g")
     	.data(entity)
     	.enter()
-    	.append("circle")
+    	.append("g")
+        .attr("class", "entity-group")
+        .attr("id", (d)=>{
+            return "entity-group-id"+d.id;
+        });
+    svgGroup.append("circle")
         .attr("class", "entity-shape")
         .attr("id", (d)=>{
-            return d.id;
+            return "entity-shape-id"+d.id;
         })
     	.attr("cx", (d)=>{
     		// console.log(d, i, pos[i].x);
@@ -191,13 +194,7 @@ function drawEntities(entity){
     	.attr("fill", (d) => {
             return d.color;
         });
-    let svgText = svg.select('.schema')
-        .append('g')
-        .attr("class", "entity-name-group")
-        .selectAll("text")
-        .data(entity)
-        .enter()
-        .append("text")
+    svgGroup.append("text")
         .attr("class", "entity-name")
         .attr("id", (d)=>{
             return d.id;
@@ -211,7 +208,7 @@ function drawEntities(entity){
         .text((d)=>{
             return d.name;
         });
-    return {shape: svgShape, text: svgText}
+    return svgGroup;
 }
 
 function drawAttrs(attrs){
