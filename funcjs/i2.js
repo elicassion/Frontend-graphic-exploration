@@ -1,29 +1,8 @@
-let PI = Math.PI;
-
-let svg = d3.select("svg");
-// let WIDTH = document.,
-// let HEIGHT = +svg.height;
-
-let obj = document.getElementById("sbox");
-let s_style = null;
-if (window.getComputedStyle) {
-    s_style = window.getComputedStyle(obj, null);    // 非IE
-} else { 
-    s_style = obj.currentStyle;  // IE
-}
-// alert("width=" + s_style.width + "\nheight=" + s_style.height);
-let WIDTH = parseInt(s_style.width);
-let HEIGHT = parseInt(s_style.height);
-console.log(WIDTH,HEIGHT);
-let COLOR = d3.scaleOrdinal(d3.schemeCategory20);
-let R = 50;
-let r = 20;
-svg.append('g')
-    .attr('class', 'schema');
+// import Queue from "utils.js"
 let dataSchema ={
     entity: [
         {
-            className: 'paper',
+            className: 'Paper',
             attrs:[
                 'paper_title',
                 'paper_conf',
@@ -34,20 +13,20 @@ let dataSchema ={
             ]
         },
         {
-            className: 'author',
+            className: 'Author',
             attrs:[
                 'author_name',
                 'author_age'
             ]
         },
         {
-            className: 'institute',
+            className: 'Institute',
             attrs:[
                 'institute_name'
             ]
         },
         {
-            className: 'conference',
+            className: 'Conference',
             attrs:[
                 'conference_location',
                 'conference_series',
@@ -89,13 +68,15 @@ let dataSchema ={
     ],
     relation: [
         {
-            source: 'author',
-            target: 'institute',
+            source: 'Author',
+            target: 'Institute',
+            id: 'works in',
             name: 'works in'
         },
         {
-            source: 'author',
-            target: 'paper',
+            source: 'Author',
+            target: 'Paper',
+            id: 'write',
             name: 'write'
         }
     ]
@@ -103,6 +84,30 @@ let dataSchema ={
 
 //TODO: Build a Class
 
+
+/*------------------------------------------
+**************Draw SVG Related**************
+------------------------------------------*/
+let PI = Math.PI;
+let svg = d3.select("svg");
+
+let obj = document.getElementById("sbox");
+let s_style = null;
+if (window.getComputedStyle) {
+    s_style = window.getComputedStyle(obj, null);    // 非IE
+} else {
+    s_style = obj.currentStyle;  // IE
+}
+
+let WIDTH = parseInt(s_style.width);
+let HEIGHT = parseInt(s_style.height);
+console.log(WIDTH,HEIGHT);
+let COLOR = d3.scaleOrdinal(d3.schemeCategory20);
+let R = 50;
+let r = 20;
+svg.append('g')
+    .attr('class', 'schema');
+/* Transform ratio coordinate to Real Coordinate */
 function transPos(x, y){
     return {
         x: WIDTH*1.0/12*x,
@@ -110,6 +115,7 @@ function transPos(x, y){
     };
 }
 
+/* Gain Layout of Main Entities */
 function getLayout(n){
     // x 12 y 9
     let pos = [];
@@ -126,6 +132,8 @@ function getLayout(n){
     return pos;
 }
 
+
+/* Gain Layout of **Attrs**  */
 function getSubLayout(pCoord, n){
     let px = pCoord.x;
     let py = pCoord.y;
@@ -141,6 +149,7 @@ function getSubLayout(pCoord, n){
     return coords;
 }
 
+/* Convert Schema to Data Points on SVG */
 function loadDataPoints(schema){
     let dataPoints = {entity:[], attrs:[]};
     console.log(schema.entity.length);
@@ -168,6 +177,7 @@ function loadDataPoints(schema){
 
 }
 
+/* Draw Shapes and Texts */
 function drawEntities(data){
     let entity = data.entity;
     let attrs = data.attrs;
@@ -258,24 +268,118 @@ function drawEntities(data){
             });
     });
 
-    // svgGroup.append("g")
-    //     .attr("class", "entity-attr")
-    //     .attr("id", (d)=>{
-    //         return "entity-attr-group-id-"+d.id;
-    //     })
-    //     .selectAll("g")
-    //     .data()
-    //     .enter()
-    //     .append("g")
-    //     .attr("class", "entity-attr-tuple")
-    //     .attr("id", (e)=>{
-    //         return "entity-attr-tuple-id-"+e.id;
-    //     });
-
 
     return svgGroup;
 }
 
+/* Execute */
+let points = loadDataPoints(dataSchema);
+let svgEntity = drawEntities(points);
+/******************************************/
+
+
+
+/*-----------------------------------------
+**************Link Algorithm***************
+------------------------------------------/
+
+/* Convert attr and relation into Paths */
+function loadPath(schema){
+    let paths = {};
+    // path: object
+    // path[source]: array of object
+    // path[source] = [{target:name,
+    //                  relation: (parent/attr/subject/object),
+    //                  relation_description_id: 'works_in',
+    //                  relation_description_name: '工作'}]
+
+    schema.relation.forEach((d, i)=>{
+        if (paths[d.source] === undefined)
+            paths[d.source] = [];
+        if (paths[d.target] === undefined)
+            paths[d.target] = [];
+        paths[d.source].push({
+            target: d.target,
+            relation: 'link',
+            relation_description_id: d.id,
+            relation_description_name: d.name
+        });
+
+        paths[d.target].push({
+            target: d.source,
+            relation: 'link',
+            relation_description_id: '^'+d.id,
+            relation_description_name: 'passive_' + d.name
+        });
+
+    });
+
+    schema.entity.forEach((d, i)=>{
+        d.attrs.forEach((e, j)=>{
+            if (paths[d.className] === undefined)
+                paths[d.className] = [];
+            if (paths[e] === undefined)
+                paths[e] = [];
+            paths[d.className].push({
+                target: e,
+                relation: 'attr',
+                relation_description_id: null,
+                relation_description_name: null});
+            paths[e].push({
+                target: d.className,
+                relation: 'parent',
+                relation_description_id: null,
+                relation_description_name: null
+            });
+        })
+    });
+
+    return paths;
+}
+function shortestPath(paths, s, t){
+    // paths: paths, see above in function loadPath(schema)
+    // s: source, node id
+    // t: target, node id
+    // return: [node id]
+
+    // BFS here
+    let q = new Queue();
+    q.push({node: s, hop: 0, p: []});
+    while (!q.isEmpty()) {
+        let cur = q.pop();
+        console.log(cur.node);
+        if (cur.node == t) {
+            cur.p.push(t);
+            return cur.p;
+        }
+        paths[cur.node].forEach((d, i) => {
+            let tmpp = cloneObj(cur.p);
+            tmpp.push(cur.node);
+            q.push({
+                node: d.target,
+                hop: cur.hop + 1,
+                p: tmpp
+            });
+        })
+    }
+}
+
+/* Execute Load Path */
+let paths = loadPath(dataSchema);
+// console.log('PATHS:', paths);
+/* Test for shortest path */
+// console.log(shortestPath(paths, 'Paper', 'Institute'));
+// console.log(shortestPath(paths, 'Author', 'Conference'));
+/*----------------------------------------*/
+
+
+
+
+
+
+
+
+/* Events */
 function toggleAttrs(e){
     // let targetEntity = e;
     // console.log(e.target.id);
@@ -284,37 +388,9 @@ function toggleAttrs(e){
     console.log(id);
     $("#entity-attr-group-id-" + id).toggle(2000);
 }
-
-let points = loadDataPoints(dataSchema);
-let svgEntity = drawEntities(points);
-
-
-
 $(".entity-tuple").click((e) => {
     // console.log(e);
     toggleAttrs(e);
 });
-// let svgAttrs = drawAttrs(points.attrs);
 
 
-// let fakedata = ['1','2','3','4','5','6','7','8'];
-// let pos = getLayout(8);
-// let s_entities = svg.append('g')
-// 	.attr("class", "entity")
-// 	.selectAll("circle")
-// 	.data(fakedata)
-// 	.enter()
-// 	.append("circle")
-// 	.attr("cx", (d, i)=>{
-// 		console.log(d, i, pos[i].x);
-// 		return pos[i].x;
-// 	})
-// 	.attr("cy", (d, i) =>{
-// 		return pos[i].y;
-// 	})
-// 	.attr("r", R)
-// 	.attr("fill", (d) => {
-//         return COLOR(d);
-//     });
-//
-// console.log(s_entities);
