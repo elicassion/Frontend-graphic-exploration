@@ -107,6 +107,18 @@ let R = 50;
 let r = 20;
 svg.append('g')
     .attr('class', 'schema');
+svg.append('g')
+    .attr('class', 'drag-links');
+svg.append('g')
+    .attr('class', 'drag-tmp');
+let lineGenerator = d3.line()
+    .x(function(d) {
+        return d[0]
+    })
+    .y(function(d) {
+        return d[1];
+    });
+
 /* Transform ratio coordinate to Real Coordinate */
 function transPos(x, y){
     return {
@@ -205,7 +217,8 @@ function drawEntities(data){
     	.attr("r", R)
     	.attr("fill", (d) => {
             return d.color;
-        });
+        })
+        .call(dragDrawLinkEvent);
     svgGroup.append("text")
         .attr("class", "entity-name")
         .attr("id", (d)=>{
@@ -376,9 +389,6 @@ let paths = loadPath(dataSchema);
 
 
 
-
-
-
 /* Events */
 function toggleAttrs(e){
     // let targetEntity = e;
@@ -388,9 +398,49 @@ function toggleAttrs(e){
     console.log(id);
     $("#entity-attr-group-id-" + id).toggle(2000);
 }
+// selection.on("click", function() {
+//     if (d3.event.defaultPrevented) return; // click suppressed
+//     console.log("clicked!");
+// });
 $(".entity-tuple").click((e) => {
     // console.log(e);
+    if (d3.event.defaultPrevented) return;
     toggleAttrs(e);
 });
 
+let curLinks = [];
+let curStartNode = undefined;
+let curEndNode = undefined;
+let dragsx = undefined;
+let dragsy = undefined;
+
+
+let dragDrawLinkEvent  = d3.behavior.drag()
+    .on("dragstart", beginDragDrawLink)
+    .on("drag", onDragDrawLink)
+    .on("dragend", endDragDrawLink);
+
+function beginDragDrawLink(t) {
+    dsx = t.cx;
+    dsy = t.cy;
+    let g = d3.select(".dag-tmp");
+    g.append("path")
+        .attr("class", "drag-link-tmp")
+        .attr("id", "drag-link-tmp-id-"+(curLinks.length-1).toString())
+        .attr("stroke, '#ccc")
+        .attr('stroke-width', '2')
+        .attr('fill', 'none');
+}
+
+function onDragDrawLink(t) {
+    let x = d3.event.x;
+    let y = d3.event.y;
+    let tmpLineData = [[dsx, dsy], [x, y]];
+    d3.select("#drag-link-tmp-id-"+(curLinks.length-1).toString())
+        .attr('d', lineGenerator(tmpLineData));
+}
+
+function endDragDrawLink(t) {
+
+}
 
