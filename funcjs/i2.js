@@ -85,6 +85,177 @@ let dataSchema ={
 //TODO: Build a Class
 
 
+
+/* Events */
+
+$("#clear-link").click(()=>{
+    clearLinks();
+})
+
+
+function toggleAttrs(node){
+    // let targetEntity = e;
+    // console.log(e.target.id);
+    // let strs = e.target.id.split("-");
+    // let id = strs[strs.length-1];
+    console.log(node.id);
+    $("#entity-attr-group-id-" + node.id).toggle(2000);
+}
+// selection.on("click", function() {
+//     if (d3.event.defaultPrevented) return; // click suppressed
+//     console.log("clicked!");
+// });
+// $(".entity-tuple").click((e) => {
+//     // console.log(e);
+//     if (d3.event.defaultPrevented) return;
+//     toggleAttrs(e);
+// });
+
+let curLinks = [];
+let tempLinks = [];
+let fixLine = false;
+let dragsx = undefined;
+let dragsy = undefined;
+let dropx = undefined;
+let dropy = undefined;
+let dragStarted = false;
+let draggingNode = null;
+let dragDropNode = null;
+
+let dragDrawLinkEvent  = d3.drag()
+    // define origin
+    .subject((d) => {
+        return d;
+    })
+    .on("start", (d)=>{
+        console.log(d);
+        //{name: "Journal", id: "Journal", x: 843, y: 313.3333333333333, color: "#f7b6d2"}
+        //Actually, it is the data that applied to the node returned.
+        dragStarted = true;
+        d3.event.sourceEvent.stopPropagation();
+    })
+    .on("drag", (d)=>{
+        // Judge in drag and prevent repeated
+        if (dragStarted) {
+            let domNode = this;
+            // console.log(domNode);
+            initiateDrag(d, domNode);
+        }
+
+        // show line
+        refreshLine(d);
+
+    })
+    .on("end", (d)=>{
+        let domNode = this;
+        if (draggingNode !== null && dragDropNode !== null){
+            endDragSave();
+        }
+        clearTempLinks();
+    });
+
+
+function refreshLine(d){
+    if (draggingNode !== null && dragDropNode !== null){
+        // fixLine = true;
+        dropx = dragDropNode.x;
+        dropy = dragDropNode.y;
+        d3.select("#drag-link-tmp-id-"+(curLinks.length).toString())
+            .attr("stroke", "#111111")
+            .attr('stroke-width', '3')
+            .attr('fill', 'none');
+    }
+    else{
+        // fixLine = false;
+        dropx = d3.event.x;
+        dropy = d3.event.y;
+        d3.select("#drag-link-tmp-id-"+(curLinks.length).toString())
+            .attr("stroke", "#777777")
+            .attr('stroke-width', '3')
+            .attr('fill', 'none');
+    }
+    // if (! fixLine) {
+    //     // let relCoord = d3.mouse(d3.select("#entity-shape-id-"+d.id));
+    //     dropx = d3.event.x;
+    //     dropy = d3.event.y;
+    // }
+    let tmpLineData = [[dragsx, dragsy], [dropx, dropy]];
+    d3.select("#drag-link-tmp-id-"+(curLinks.length).toString())
+        .attr('d', lineGenerator(tmpLineData))
+        .attr("stroke", "#777777")
+        .attr('stroke-width', '3')
+        .attr('fill', 'none');
+}
+
+function initiateDrag(d, domNode) {
+    draggingNode = d;
+    //TODO: style change
+    /* show latent path */
+    dragsx = d.x;
+    dragsy = d.y;
+    let g = d3.select(".drag-tmp");
+    let idstr = curLinks.length;
+    idstr = idstr.toString();
+    g.append("path")
+        .attr("class", "drag-link-tmp")
+        .attr("id", (d)=>{
+            return "drag-link-tmp-id-"+idstr;
+        });
+
+
+
+    // prevent repeated in "drag"
+    dragStarted = null;
+}
+
+
+function clearTempLinks(){
+    d3.select(".drag-tmp").selectAll("path").remove();
+}
+
+function clearLinks(){
+    d3.select(".drag-links").selectAll("path").remove();
+}
+
+function endDragSave() {
+    let g = d3.select(".drag-links");
+    let idstr = curLinks.length;
+    idstr = idstr.toString();
+    let tmpLineData = [[dragsx, dragsy], [dropx, dropy]];
+    g.append("path")
+        .attr("class", "drag-link")
+        .attr("id", (d)=>{
+            return "drag-link-id-"+idstr;
+        })
+        .attr('d', lineGenerator(tmpLineData))
+        .attr("stroke", "#000000")
+        .attr('stroke-width', '3')
+        .attr('fill', 'none');
+    curLinks.push({source: draggingNode,
+                    end: dragDropNode});
+    draggingNode = null;
+    dragDropNode = null;
+    dragsx = null;
+    dragsy = null;
+    dropx = null;
+    dropy = null;
+    console.log("curlink", curLinks);
+}
+
+
+
+function overCircle(d){
+    dragDropNode = d;
+    refreshLine(d);
+}
+
+function outCircle(d){
+    dragDropNode = null;
+    refreshLine(d);
+}
+
+
+
 /*------------------------------------------
 **************Draw SVG Related**************
 ------------------------------------------*/
@@ -198,11 +369,27 @@ function drawEntities(data){
     	.data(entity)
     	.enter()
     	.append("g")
+        .call(dragDrawLinkEvent)
+        .attr("class", "entity-group")
+        .attr("id", (d)=>{
+            return "entity-group-id-"+d.id;
+        });
+    let entityGroup = svgGroup
+        .append("g")
         .attr("class", "entity-tuple")
         .attr("id", (d)=>{
-            return "entity-tuple-id-"+d.id;
+            return "entity-tuple-id"+d.id;
+        })
+        .on("mouseover", (node) =>{
+            overCircle(node);
+        })
+        .on("mouseout", (node) =>{
+            outCircle(node);
+        })
+        .on("click", (node)=>{
+            toggleAttrs(node);
         });
-    svgGroup.append("circle")
+    entityGroup.append("circle")
         .attr("class", "entity-shape")
         .attr("id", (d)=>{
             return "entity-shape-id-"+d.id;
@@ -218,8 +405,10 @@ function drawEntities(data){
     	.attr("fill", (d) => {
             return d.color;
         })
-        .call(dragDrawLinkEvent);
-    svgGroup.append("text")
+        .attr('pointer-events', 'mouseover')
+        ;
+
+    entityGroup.append("text")
         .attr("class", "entity-name")
         .attr("id", (d)=>{
             return "entity-name-id-"+d.id;
@@ -237,7 +426,7 @@ function drawEntities(data){
     attrs.forEach((d, i)=>{
         let pName = d.parent;
         let dt = d.data;
-        let pg = d3.select("#entity-tuple-id-"+pName)
+        let pg = d3.select("#entity-group-id-"+pName)
             .append("g")
             .attr("class", "entity-attr-group")
             .attr("id", "entity-attr-group-id-"+pName)
@@ -248,6 +437,12 @@ function drawEntities(data){
             .attr("class", "entity-attr-tuple")
             .attr("id", (e, j)=>{
                 return "entity-attr-tuple-id-"+e.id;
+            })
+            .on("mouseover", function(node) {
+                overCircle(node);
+            })
+            .on("mouseout", function(node) {
+                outCircle(node);
             });
         pg.append("circle")
             .attr("class", "entity-attr-shape")
@@ -389,58 +584,5 @@ let paths = loadPath(dataSchema);
 
 
 
-/* Events */
-function toggleAttrs(e){
-    // let targetEntity = e;
-    // console.log(e.target.id);
-    let strs = e.target.id.split("-");
-    let id = strs[strs.length-1];
-    console.log(id);
-    $("#entity-attr-group-id-" + id).toggle(2000);
-}
-// selection.on("click", function() {
-//     if (d3.event.defaultPrevented) return; // click suppressed
-//     console.log("clicked!");
-// });
-$(".entity-tuple").click((e) => {
-    // console.log(e);
-    if (d3.event.defaultPrevented) return;
-    toggleAttrs(e);
-});
 
-let curLinks = [];
-let curStartNode = undefined;
-let curEndNode = undefined;
-let dragsx = undefined;
-let dragsy = undefined;
-
-
-let dragDrawLinkEvent  = d3.behavior.drag()
-    .on("dragstart", beginDragDrawLink)
-    .on("drag", onDragDrawLink)
-    .on("dragend", endDragDrawLink);
-
-function beginDragDrawLink(t) {
-    dsx = t.cx;
-    dsy = t.cy;
-    let g = d3.select(".dag-tmp");
-    g.append("path")
-        .attr("class", "drag-link-tmp")
-        .attr("id", "drag-link-tmp-id-"+(curLinks.length-1).toString())
-        .attr("stroke, '#ccc")
-        .attr('stroke-width', '2')
-        .attr('fill', 'none');
-}
-
-function onDragDrawLink(t) {
-    let x = d3.event.x;
-    let y = d3.event.y;
-    let tmpLineData = [[dsx, dsy], [x, y]];
-    d3.select("#drag-link-tmp-id-"+(curLinks.length-1).toString())
-        .attr('d', lineGenerator(tmpLineData));
-}
-
-function endDragDrawLink(t) {
-
-}
 
