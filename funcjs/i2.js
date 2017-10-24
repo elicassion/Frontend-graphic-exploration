@@ -369,7 +369,6 @@ function drawEntities(data){
     	.data(entity)
     	.enter()
     	.append("g")
-        .call(dragDrawLinkEvent)
         .attr("class", "entity-group")
         .attr("id", (d)=>{
             return "entity-group-id-"+d.id;
@@ -388,7 +387,8 @@ function drawEntities(data){
         })
         .on("click", (node)=>{
             toggleAttrs(node);
-        });
+        })
+        .call(dragDrawLinkEvent);
     entityGroup.append("circle")
         .attr("class", "entity-shape")
         .attr("id", (d)=>{
@@ -438,6 +438,7 @@ function drawEntities(data){
             .attr("id", (e, j)=>{
                 return "entity-attr-tuple-id-"+e.id;
             })
+            .call(dragDrawLinkEvent)
             .on("mouseover", function(node) {
                 overCircle(node);
             })
